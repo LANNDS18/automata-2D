@@ -13,8 +13,8 @@ int main(int argc, char *argv[])
   /*
    *  Define the main arrays for the simulation
    */
-
-  int cell[L + 2][L + 2], neigh[L + 2][L + 2];
+  int **cell = arralloc(sizeof(int), 2, L + 2, L + 2);
+  int **neigh = arralloc(sizeof(int), 2, L + 2, L + 2);
 
   /*
    *  Additional array WITHOUT halos for initialisation and IO. This
@@ -22,7 +22,9 @@ int main(int argc, char *argv[])
    *  these two steps in serial
    */
 
-  int allcell[L][L], tempcell[L][L];
+  int **allcell = arralloc(sizeof(int), 2, L, L);
+  int **tempcell = arralloc(sizeof(int), 2, L, L);
+
 
   /*
    *  Variables that define the simulation
@@ -304,13 +306,18 @@ int main(int argc, char *argv[])
   MPI_Reduce(&tempcell[0][0], &allcell[0][0], L * L, MPI_INT, MPI_SUM, 0, cart);
 
   /*
-   *  Write the cells to the file "cell.pbm" from rank 0
+   *  Write the cells to the file "cell.pbm" from rank 0 with dynamic allocation
    */
 
   if (rank == 0)
   {
-    cellwrite("cell.pbm", allcell);
+    cellwritedynamic("cell.pbm", allcell, L);
   }
+
+  free(neigh);
+  free(cell);
+  free(tempcell);
+  free(allcell);
 
   /*
    * Finalise MPI before finishing

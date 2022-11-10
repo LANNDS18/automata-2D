@@ -3,7 +3,7 @@
 
 #include "automaton.h"
 
-void initial_array_with_0(int l, int cell[l][l])
+void initial_array_with_0(int l, int **cell)
 {
     for (int i = 0; i < l; i++)
     {
@@ -14,7 +14,7 @@ void initial_array_with_0(int l, int cell[l][l])
     }
 }
 
-void print_array(int l, int display[l][l])
+void print_array(int l, int **display)
 {
     for (int i = 0; i < l; i++)
     {
@@ -26,7 +26,7 @@ void print_array(int l, int display[l][l])
     }
 }
 
-void check_number_live_cells(int l, int cell[l][l])
+void check_number_live_cells(int l, int **cell)
 {
     int total = 0;
     for (int i = 0; i < l; i++)
