@@ -149,8 +149,19 @@ int main(int argc, char *argv[])
 
   int LX = L / dim[0];
   int LY = L / dim[1];
-  int X_COORD = LX * coord[0];
-  int Y_COORD = LY * coord[1];
+
+  int X_COORD = L/dim[0] * coord[0];
+  int Y_COORD = L/dim[1] * coord[1];
+
+  int IS_END_X = coord[0] == (dim[0] - 1);
+  int IS_END_Y = coord[1] == (dim[1] - 1);
+
+  if (IS_END_X) LX = L - LX * (dim[0] - 1);
+  if (IS_END_Y) LY = L - LY * (dim[1] - 1);
+
+
+  //printf("%d, %d, coord: (%d, %d), LX, LY,", IS_END_X, IS_END_Y, coord[0], coord[1]);
+
 
   printf("L = %d, LY= %d, LX=%d \n", L, LY, LX);
 
