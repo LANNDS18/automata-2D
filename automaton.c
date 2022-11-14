@@ -25,7 +25,6 @@ int main(int argc, char *argv[])
   int **allcell = arralloc(sizeof(int), 2, L, L);
   int **tempcell = arralloc(sizeof(int), 2, L, L);
 
-
   /*
    *  Variables that define the simulation
    */
@@ -36,8 +35,9 @@ int main(int argc, char *argv[])
   /*
    *  Local variables
    */
-
-  int i, j, ncell, localncell, step, maxstep, printfreq;
+  int lower_target, upper_target;
+  int i, j, ncell, localncell, maxstep, printfreq;
+  int step = 0;
   double r;
 
   /*
@@ -80,10 +80,11 @@ int main(int argc, char *argv[])
   }
 
   /*
-   *  Update for a fixed number of steps, periodically report progress
+   *  Update for a large number of steps to prevent execute without stopping
+   *  periodically report progress
    */
-
-  maxstep = 10 * L;
+  
+  maxstep = 1000000;
   printfreq = 500;
 
   if (rank == 0)
@@ -130,10 +131,23 @@ int main(int argc, char *argv[])
         }
       }
     }
+    lower_target = (int)((double)ncell * 2 / 3);
+    upper_target = (int)((double)ncell * 3 / 2);
 
     printf("automaton: rho = %f, live cells = %d, actual density = %f\n",
            rho, ncell, ((double)ncell) / ((double)L * L));
+    printf("lower target number of cells: %d\n", lower_target);
+    printf("upper target number of cells: %d\n", upper_target);
   }
+
+  // Deistribute the allcell to all the processess
+  MPI_Bcast(&allcell[0][0], L * L, MPI_INT, 0, comm);
+  MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
+
+  // Initialize all cells to 0
+  initial_array_with_0(L + 2, cell);
+  initial_array_with_0(L, tempcell);
 
   // Initalize the Dim and Cart
   int coord[2];
@@ -143,6 +157,7 @@ int main(int argc, char *argv[])
   int dim_size = 2;
   MPI_Comm cart;
 
+  /* Create a 2D (n * m) Cartersian Topology where n*m = NPROC */
   MPI_Dims_create(NPROC, 2, dim);
   MPI_Cart_create(comm, dim_size, dim, period, FALSE, &cart);
   MPI_Cart_coords(cart, rank, dim_size, coord);
@@ -159,11 +174,10 @@ int main(int argc, char *argv[])
   if (IS_END_X) LX = L - LX * (dim[0] - 1);
   if (IS_END_Y) LY = L - LY * (dim[1] - 1);
 
+  printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
 
   //printf("%d, %d, coord: (%d, %d), LX, LY,", IS_END_X, IS_END_Y, coord[0], coord[1]);
 
-
-  printf("L = %d, LY= %d, LX=%d \n", L, LY, LX);
 
   MPI_Cart_shift(cart, 0, 1, &left, &right);
   MPI_Cart_shift(cart, 1, 1, &down, &up);
@@ -172,19 +186,12 @@ int main(int argc, char *argv[])
   MPI_Type_vector(LX, 1, L + 2, MPI_INT, &VERTICAL_HALO_TYPE);
   MPI_Type_commit(&VERTICAL_HALO_TYPE);
 
-/*
- * Using the Vector to scatter the 2D array is not working
-  MPI_Datatype LXLY_SCATTER_TYPE;
-  MPI_Type_vector(LX, LY, L, MPI_INT, &LXLY_SCATTER_TYPE);
-  MPI_Type_commit(&LXLY_SCATTER_TYPE);
- */
-
-  // Deistribute the allcell to all the processess
-  MPI_Bcast(&allcell[0][0], L * L, MPI_INT, 0, cart);
-
-  // Initialize all cells to 0
-  initial_array_with_0(L + 2, cell);
-  initial_array_with_0(L, tempcell);
+  /*
+   * Using the Vector to scatter the 2D array but it is not working
+    MPI_Datatype LXLY_SCATTER_TYPE;
+    MPI_Type_vector(LX, LY, L, MPI_INT, &LXLY_SCATTER_TYPE);
+    MPI_Type_commit(&LXLY_SCATTER_TYPE);
+   */
 
   for (int i = X_COORD; i < X_COORD + LX; i++)
   {
@@ -200,7 +207,7 @@ int main(int argc, char *argv[])
   MPI_Barrier(cart);
   double t_start = MPI_Wtime();
 
-  for (step = 1; step <= maxstep; step++)
+  while (step <= maxstep)
   {
 
     /* Debugging
@@ -210,19 +217,23 @@ int main(int argc, char *argv[])
       }
     */
 
+    step ++;
+
     MPI_Issend(&cell[X_COORD + LX][Y_COORD + 1], LY, MPI_INT, right, tag, cart, &request[0]);
     MPI_Issend(&cell[X_COORD + 1][Y_COORD + 1], LY, MPI_INT, left, tag, cart, &request[1]);
 
     MPI_Recv(&cell[X_COORD][Y_COORD + 1], LY, MPI_INT, left, tag, cart, &status);
     MPI_Recv(&cell[X_COORD + LX + 1][Y_COORD + 1], LY, MPI_INT, right, tag, cart, &status);
 
-    /*
+    /* Debugging graph of cart topology for four processes
       -------
       | 1 3 |
       | 0 2 |
       -------
     */
 
+
+    /* Non Blocking Send and Receive function to Upper and Lower Processes */
     MPI_Issend(&cell[X_COORD + 1][Y_COORD + LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
     MPI_Issend(&cell[X_COORD + 1][Y_COORD + 1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
 
@@ -243,6 +254,7 @@ int main(int argc, char *argv[])
     {
       for (j = Y_COORD + 1; j <= Y_COORD + LY; j++)
       {
+        // Compute the lives cell for each assigned cell
         neigh[i][j] = cell[i][j] + cell[i][j - 1] + cell[i][j + 1] + cell[i - 1][j] + cell[i + 1][j];
       }
     }
@@ -272,10 +284,9 @@ int main(int argc, char *argv[])
     }
 
     /*
-     *  Compute global number of changes on rank 0
+     *  Compute global number of changes on all processes for checking whether reaching target value
      */
-
-    MPI_Reduce(&localncell, &ncell, 1, MPI_INT, MPI_SUM, 0, cart);
+    MPI_Allreduce(&localncell, &ncell, 1, MPI_INT, MPI_SUM, cart);
 
     /*
      *  Report progress every now and then
@@ -289,8 +300,23 @@ int main(int argc, char *argv[])
                step, ncell);
       }
     }
+
+    /*
+     * Check if it reach the stop condition, if it is True, break the loop.
+     */
+
+    if (ncell >= upper_target || ncell <= lower_target)
+    {
+      if (rank == 0 && step % printfreq != 0)
+      {
+        printf("automaton: number of live cells on step %d is %d\n",
+               step, ncell);
+      }
+      break;
+    }
   }
 
+  /* End of the loop stop the timing */
   MPI_Barrier(cart);
   double t_end = MPI_Wtime();
   double interval = t_end - t_start;
@@ -314,6 +340,7 @@ int main(int argc, char *argv[])
     }
   }
 
+  /* Collect the result by reduction */
   MPI_Reduce(&tempcell[0][0], &allcell[0][0], L * L, MPI_INT, MPI_SUM, 0, cart);
 
   /*
@@ -325,6 +352,7 @@ int main(int argc, char *argv[])
     cellwritedynamic("cell.pbm", allcell, L);
   }
 
+  /* Free the dynamic assigned Memory */
   free(neigh);
   free(cell);
   free(tempcell);
