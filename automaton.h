@@ -31,9 +31,9 @@ float uni(void);
 /*
  * utilities function for initialization and debugging
  */
-void initial_array_with_0(int l, int **cell);
-void print_array(int l, int **display);
-void check_number_live_cells(int l, int **cell);
+void initial_array_with_0(int lx, int ly, int **cell);
+void print_array(int lx, int ly, int **display);
+void check_number_live_cells(int lx, int ly, int **cell);
 
 /*
  * Dynamic Array Allocation 

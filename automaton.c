@@ -10,11 +10,6 @@
 
 int main(int argc, char *argv[])
 {
-  /*
-   *  Define the main arrays for the simulation
-   */
-  int **cell = arralloc(sizeof(int), 2, L + 2, L + 2);
-  int **neigh = arralloc(sizeof(int), 2, L + 2, L + 2);
 
   /*
    *  Additional array WITHOUT halos for initialisation and IO. This
@@ -83,7 +78,7 @@ int main(int argc, char *argv[])
    *  Update for a large number of steps to prevent execute without stopping
    *  periodically report progress
    */
-  
+
   maxstep = 1000000;
   printfreq = 500;
 
@@ -145,9 +140,7 @@ int main(int argc, char *argv[])
   MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
   MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
 
-  // Initialize all cells to 0
-  initial_array_with_0(L + 2, cell);
-  initial_array_with_0(L, tempcell);
+  initial_array_with_0(L, L, tempcell);
 
   // Initalize the Dim and Cart
   int coord[2];
@@ -165,43 +158,64 @@ int main(int argc, char *argv[])
   int LX = L / dim[0];
   int LY = L / dim[1];
 
-  int X_COORD = L/dim[0] * coord[0];
-  int Y_COORD = L/dim[1] * coord[1];
+  int X_COORD = L / dim[0] * coord[0];
+  int Y_COORD = L / dim[1] * coord[1];
 
   int IS_END_X = coord[0] == (dim[0] - 1);
   int IS_END_Y = coord[1] == (dim[1] - 1);
 
-  if (IS_END_X) LX = L - LX * (dim[0] - 1);
-  if (IS_END_Y) LY = L - LY * (dim[1] - 1);
+  if (IS_END_X)
+    LX = L - LX * (dim[0] - 1);
+  if (IS_END_Y)
+    LY = L - LY * (dim[1] - 1);
 
   printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
 
-  //printf("%d, %d, coord: (%d, %d), LX, LY,", IS_END_X, IS_END_Y, coord[0], coord[1]);
-
+  // printf("%d, %d, coord: (%d, %d), LX, LY,", IS_END_X, IS_END_Y, coord[0], coord[1]);
 
   MPI_Cart_shift(cart, 0, 1, &left, &right);
   MPI_Cart_shift(cart, 1, 1, &down, &up);
 
   MPI_Datatype VERTICAL_HALO_TYPE;
-  MPI_Type_vector(LX, 1, L + 2, MPI_INT, &VERTICAL_HALO_TYPE);
+  MPI_Type_vector(LX, 1, LY + 2, MPI_INT, &VERTICAL_HALO_TYPE);
   MPI_Type_commit(&VERTICAL_HALO_TYPE);
 
-  /*
-   * Using the Vector to scatter the 2D array but it is not working
-    MPI_Datatype LXLY_SCATTER_TYPE;
-    MPI_Type_vector(LX, LY, L, MPI_INT, &LXLY_SCATTER_TYPE);
-    MPI_Type_commit(&LXLY_SCATTER_TYPE);
-   */
 
-  for (int i = X_COORD; i < X_COORD + LX; i++)
+  /*
+   *  Define the main arrays for the simulation
+   */
+  int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
+  int **neigh = arralloc(sizeof(int), 2, LX + 2, LY + 2);
+
+  int **smallcell = arralloc(sizeof(int), 2, LX, LY);
+
+  for (i = 0; i < LX; i++)
   {
-    for (int j = Y_COORD; j < Y_COORD + LY; j++)
+    for (j = 0; j < LY; j++)
     {
-      cell[i + 1][j + 1] = allcell[i][j];
+      smallcell[i][j] = allcell[X_COORD + i][Y_COORD + j];
     }
   }
 
-  initial_array_with_0(L, allcell);
+  for (i = 1; i <= LX; i++)
+  {
+    for (j = 1; j <= LY; j++)
+    {
+      cell[i][j] = smallcell[i - 1][j - 1];
+    }
+  }
+
+  for (i = 0; i <= LX + 1; i++) // zero the bottom and top halos
+  {
+    cell[i][0] = 0;
+    cell[i][LY + 1] = 0;
+  }
+
+  for (j = 0; j <= LY + 1; j++) // zero the left and right halos
+  {
+    cell[0][j] = 0;
+    cell[LX + 1][j] = 0;
+  }
 
   // Start the timer
   MPI_Barrier(cart);
@@ -209,21 +223,13 @@ int main(int argc, char *argv[])
 
   while (step <= maxstep)
   {
+    step++;
 
-    /* Debugging
-      for(int i = 0; i < lx; i++){
-        cell[x_coor + i + 1][y_coor + 1] = rank * (i+1);
-        cell[x_coor + i + 1][y_coor + ly] = -rank * (i+1);
-      }
-    */
+    MPI_Issend(&cell[LX][1], LY, MPI_INT, right, tag, cart, &request[0]);
+    MPI_Issend(&cell[1][1], LY, MPI_INT, left, tag, cart, &request[1]);
 
-    step ++;
-
-    MPI_Issend(&cell[X_COORD + LX][Y_COORD + 1], LY, MPI_INT, right, tag, cart, &request[0]);
-    MPI_Issend(&cell[X_COORD + 1][Y_COORD + 1], LY, MPI_INT, left, tag, cart, &request[1]);
-
-    MPI_Recv(&cell[X_COORD][Y_COORD + 1], LY, MPI_INT, left, tag, cart, &status);
-    MPI_Recv(&cell[X_COORD + LX + 1][Y_COORD + 1], LY, MPI_INT, right, tag, cart, &status);
+    MPI_Recv(&cell[0][1], LY, MPI_INT, left, tag, cart, &status);
+    MPI_Recv(&cell[LX + 1][1], LY, MPI_INT, right, tag, cart, &status);
 
     /* Debugging graph of cart topology for four processes
       -------
@@ -232,15 +238,23 @@ int main(int argc, char *argv[])
       -------
     */
 
-
     /* Non Blocking Send and Receive function to Upper and Lower Processes */
-    MPI_Issend(&cell[X_COORD + 1][Y_COORD + LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
-    MPI_Issend(&cell[X_COORD + 1][Y_COORD + 1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
+    MPI_Issend(&cell[1][LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
+    MPI_Issend(&cell[1][1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
 
-    MPI_Recv(&cell[X_COORD + 1][Y_COORD], 1, VERTICAL_HALO_TYPE, down, tag, cart, &status);
-    MPI_Recv(&cell[X_COORD + 1][Y_COORD + LY + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
+    MPI_Recv(&cell[1][0], 1, VERTICAL_HALO_TYPE, down, tag, cart, &status);
+    MPI_Recv(&cell[1][LY + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
 
     /* Debuging
+
+
+    if (rank == 1)
+    {
+      print_array(LX+2, LY+2, cell);
+      printf("xcoor, ycoo= (%d, %d)\n", X_COORD, Y_COORD);
+      printf("left: %d, right: %d, up: %d, down: %d for rank %d step:%d\n", left, right, up, down, rank, step);
+    }
+
     if (rank == 1)
     {
       print_array(L+2, cell);
@@ -250,9 +264,9 @@ int main(int argc, char *argv[])
     }
     */
 
-    for (i = X_COORD + 1; i <= X_COORD + LX; i++)
+    for (i = 1; i <= LX; i++)
     {
-      for (j = Y_COORD + 1; j <= Y_COORD + LY; j++)
+      for (j = 1; j <= LY; j++)
       {
         // Compute the lives cell for each assigned cell
         neigh[i][j] = cell[i][j] + cell[i][j - 1] + cell[i][j + 1] + cell[i - 1][j] + cell[i + 1][j];
@@ -266,9 +280,9 @@ int main(int argc, char *argv[])
 
     localncell = 0;
 
-    for (i = X_COORD + 1; i <= X_COORD + LX; i++)
+    for (i = 1; i <= LX; i++)
     {
-      for (j = Y_COORD + 1; j <= Y_COORD + LY; j++)
+      for (j = 1; j <= LY; j++)
       {
 
         if (neigh[i][j] == 2 || neigh[i][j] == 4 || neigh[i][j] == 5)
@@ -332,11 +346,11 @@ int main(int argc, char *argv[])
    *  Copy the centre of cell, excluding the halos, into allcell
    */
 
-  for (i = X_COORD; i < X_COORD + LX; i++)
+  for (i = 0; i < LX; i++)
   {
-    for (j = Y_COORD; j < Y_COORD + LY; j++)
+    for (j = 0; j < LY; j++)
     {
-      tempcell[i][j] = cell[i + 1][j + 1];
+      tempcell[X_COORD + i][Y_COORD + j] = cell[i + 1][j + 1];
     }
   }
 

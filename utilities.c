@@ -3,22 +3,22 @@
 
 #include "automaton.h"
 
-void initial_array_with_0(int l, int **cell)
+void initial_array_with_0(int lx, int ly, int **cell)
 {
-    for (int i = 0; i < l; i++)
+    for (int i = 0; i < lx; i++)
     {
-        for (int j = 0; j < l; j++)
+        for (int j = 0; j < ly; j++)
         {
             cell[i][j] = 0;
         }
     }
 }
 
-void print_array(int l, int **display)
+void print_array(int lx, int ly, int **display)
 {
-    for (int i = 0; i < l; i++)
+    for (int i = 0; i < lx; i++)
     {
-        for (int j = 0; j < l; j++)
+        for (int j = 0; j < ly; j++)
         {
             printf("%d,", display[i][j]);
         }
@@ -26,12 +26,12 @@ void print_array(int l, int **display)
     }
 }
 
-void check_number_live_cells(int l, int **cell)
+void check_number_live_cells(int lx, int ly, int **cell)
 {
     int total = 0;
-    for (int i = 0; i < l; i++)
+    for (int i = 0; i < lx; i++)
     {
-        for (int j = 0; j < l; j++)
+        for (int j = 0; j < ly; j++)
         {
             if (cell[i][j] == 1)
                 total++;
