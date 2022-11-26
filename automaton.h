@@ -15,6 +15,7 @@
 /*
  * create 2d simulation world and return assigned lx, ly coordinate to each process
  */
+
 void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD);
 
 

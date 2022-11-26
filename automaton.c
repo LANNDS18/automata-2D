@@ -129,6 +129,11 @@ int main(int argc, char *argv[])
   MPI_Cart_shift(cart, 0, 1, &left, &right);
   MPI_Cart_shift(cart, 1, 1, &down, &up);
 
+
+ /* 
+ * Define a vector derived datatype for send and recv the halo from 
+ */
+
   MPI_Datatype VERTICAL_HALO_TYPE;
   MPI_Type_vector(LX, 1, LY + 2, MPI_INT, &VERTICAL_HALO_TYPE);
   MPI_Type_commit(&VERTICAL_HALO_TYPE);
