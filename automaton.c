@@ -4,17 +4,11 @@
 
 #include "automaton.h"
 
-/*
- * 2D decomposition parallel program to simulate a 2D cellular automaton
- */
-
 int main(int argc, char *argv[])
 {
 
   /*
-   *  Additional array WITHOUT halos for initialisation and IO. This
-   *  is of size LxL because, even in our parallel program, we do
-   *  these two steps in serial
+   *  Additional array WITHOUT halos for initialisation and IO.
    */
 
   int **allcell = arralloc(sizeof(int), 2, L, L);
@@ -33,7 +27,6 @@ int main(int argc, char *argv[])
   int lower_target, upper_target;
   int i, j, ncell, localncell, maxstep, printfreq;
   int step = 0;
-  double r;
 
   /*
    *  MPI common world variables
@@ -101,31 +94,9 @@ int main(int argc, char *argv[])
     printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
            L, rho, seed, maxstep);
 
-    rinit(seed);
+    /*  Initialise with the fraction of filled cells equal to rho */
+    init_cell_with_seed(L, seed, rho, &ncell, allcell);
 
-    /*
-     *  Initialise with the fraction of filled cells equal to rho
-     */
-
-    ncell = 0;
-
-    for (i = 0; i < L; i++)
-    {
-      for (j = 0; j < L; j++)
-      {
-        r = uni();
-
-        if (r < rho)
-        {
-          allcell[i][j] = 1;
-          ncell++;
-        }
-        else
-        {
-          allcell[i][j] = 0;
-        }
-      }
-    }
     lower_target = (int)((double)ncell * 2 / 3);
     upper_target = (int)((double)ncell * 3 / 2);
 
@@ -140,39 +111,21 @@ int main(int argc, char *argv[])
   MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
   MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
 
-  initial_array_with_0(L, L, tempcell);
-
-  // Initalize the Dim and Cart
-  int coord[2];
-  int dim[2] = {0, 0};
-  int up, down, left, right;
-  int period[2] = {FALSE, TRUE};
-  int dim_size = 2;
   MPI_Comm cart;
 
-  /* Create a 2D (n * m) Cartersian Topology where n*m = NPROC */
-  MPI_Dims_create(NPROC, 2, dim);
-  MPI_Cart_create(comm, dim_size, dim, period, FALSE, &cart);
-  MPI_Cart_coords(cart, rank, dim_size, coord);
+  /* store the start point of the assigned part of cell for each dim */
+  int COORD[2];
 
-  int LX = L / dim[0];
-  int LY = L / dim[1];
+  /* The length assigned cell for each dim */
+  int LX, LY;
 
-  int X_COORD = L / dim[0] * coord[0];
-  int Y_COORD = L / dim[1] * coord[1];
+  /* Rank of neighbour process */
+  int up, down, left, right;
 
-  int IS_END_X = coord[0] == (dim[0] - 1);
-  int IS_END_Y = coord[1] == (dim[1] - 1);
-
-  if (IS_END_X)
-    LX = L - LX * (dim[0] - 1);
-  if (IS_END_Y)
-    LY = L - LY * (dim[1] - 1);
-
+  create_2d_cart_and_assign_coord(rank, comm, &cart, &LX, &LY, &COORD[0]);
   printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
 
-  // printf("%d, %d, coord: (%d, %d), LX, LY,", IS_END_X, IS_END_Y, coord[0], coord[1]);
-
+  /* Get the neighbour process by cart shift */
   MPI_Cart_shift(cart, 0, 1, &left, &right);
   MPI_Cart_shift(cart, 1, 1, &down, &up);
 
@@ -180,42 +133,12 @@ int main(int argc, char *argv[])
   MPI_Type_vector(LX, 1, LY + 2, MPI_INT, &VERTICAL_HALO_TYPE);
   MPI_Type_commit(&VERTICAL_HALO_TYPE);
 
-
   /*
-   *  Define the main arrays for the simulation
+   *  Define the main arrays for the simulation based on LX, LY
    */
   int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
   int **neigh = arralloc(sizeof(int), 2, LX + 2, LY + 2);
-
-  int **smallcell = arralloc(sizeof(int), 2, LX, LY);
-
-  for (i = 0; i < LX; i++)
-  {
-    for (j = 0; j < LY; j++)
-    {
-      smallcell[i][j] = allcell[X_COORD + i][Y_COORD + j];
-    }
-  }
-
-  for (i = 1; i <= LX; i++)
-  {
-    for (j = 1; j <= LY; j++)
-    {
-      cell[i][j] = smallcell[i - 1][j - 1];
-    }
-  }
-
-  for (i = 0; i <= LX + 1; i++) // zero the bottom and top halos
-  {
-    cell[i][0] = 0;
-    cell[i][LY + 1] = 0;
-  }
-
-  for (j = 0; j <= LY + 1; j++) // zero the left and right halos
-  {
-    cell[0][j] = 0;
-    cell[LX + 1][j] = 0;
-  }
+  init_local_cell(LX, LY, COORD, allcell, cell);
 
   // Start the timer
   MPI_Barrier(cart);
@@ -225,44 +148,18 @@ int main(int argc, char *argv[])
   {
     step++;
 
-    MPI_Issend(&cell[LX][1], LY, MPI_INT, right, tag, cart, &request[0]);
-    MPI_Issend(&cell[1][1], LY, MPI_INT, left, tag, cart, &request[1]);
+    MPI_Isend(&cell[LX][1], LY, MPI_INT, right, tag, cart, &request[0]);
+    MPI_Isend(&cell[1][1], LY, MPI_INT, left, tag, cart, &request[1]);
 
     MPI_Recv(&cell[0][1], LY, MPI_INT, left, tag, cart, &status);
     MPI_Recv(&cell[LX + 1][1], LY, MPI_INT, right, tag, cart, &status);
 
-    /* Debugging graph of cart topology for four processes
-      -------
-      | 1 3 |
-      | 0 2 |
-      -------
-    */
-
     /* Non Blocking Send and Receive function to Upper and Lower Processes */
-    MPI_Issend(&cell[1][LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
-    MPI_Issend(&cell[1][1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
+    MPI_Isend(&cell[1][LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
+    MPI_Isend(&cell[1][1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
 
     MPI_Recv(&cell[1][0], 1, VERTICAL_HALO_TYPE, down, tag, cart, &status);
     MPI_Recv(&cell[1][LY + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
-
-    /* Debuging
-
-
-    if (rank == 1)
-    {
-      print_array(LX+2, LY+2, cell);
-      printf("xcoor, ycoo= (%d, %d)\n", X_COORD, Y_COORD);
-      printf("left: %d, right: %d, up: %d, down: %d for rank %d step:%d\n", left, right, up, down, rank, step);
-    }
-
-    if (rank == 1)
-    {
-      print_array(L+2, cell);
-      printf("xcoor, ycoo= (%d, %d)\n", x_coor, y_coor);
-      printf("proc:%d, xcoor:%d, ycoor:%d\n",rank, x_coor, y_coor);
-      printf("left: %d, right: %d, up: %d, down: %d for rank %d step:%d\n", left, right, up, down, rank, step);
-    }
-    */
 
     for (i = 1; i <= LX; i++)
     {
@@ -280,6 +177,7 @@ int main(int argc, char *argv[])
 
     localncell = 0;
 
+    /* Update live cell by counting neighbour */
     for (i = 1; i <= LX; i++)
     {
       for (j = 1; j <= LY; j++)
@@ -303,15 +201,14 @@ int main(int argc, char *argv[])
     MPI_Allreduce(&localncell, &ncell, 1, MPI_INT, MPI_SUM, cart);
 
     /*
-     *  Report progress every now and then
+     *  Report progress by printfreq
      */
 
     if (step % printfreq == 0)
     {
       if (rank == 0)
       {
-        printf("automaton: number of live cells on step %d is %d\n",
-               step, ncell);
+        printf("automaton: number of live cells on step %d is %d\n", step, ncell);
       }
     }
 
@@ -320,37 +217,55 @@ int main(int argc, char *argv[])
      */
 
     if (ncell >= upper_target || ncell <= lower_target)
-    {
-      if (rank == 0 && step % printfreq != 0)
-      {
-        printf("automaton: number of live cells on step %d is %d\n",
-               step, ncell);
-      }
       break;
-    }
   }
 
-  /* End of the loop stop the timing */
+  /*
+   *Stop the timing at the end of loop
+   */
+
   MPI_Barrier(cart);
   double t_end = MPI_Wtime();
   double interval = t_end - t_start;
   double time_per_step = interval / step;
 
+  /*
+   * Output the timing result and whether and which targets it achieve
+   */
+
   if (rank == 0)
   {
+    printf("\n");
     printf("Total computing time is %f [s]\n", interval);
     printf("Time per step is %g [s]\n", time_per_step);
+    printf("\n");
+    if (ncell >= upper_target)
+    {
+      printf("Sucesslly achieve upper target, current live cells: %d, step: %d\n", ncell, step);
+    }
+    else if (ncell <= lower_target)
+    {
+      printf("Sucesslly achieve lower target, current live cells: %d, step: %d\n", ncell, step);
+    }
+    else
+    {
+      printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d", maxstep, ncell);
+    }
+    printf("\n");
   }
 
+  /* Initialize tempcell with all 0 to avoid wrong reduction */
+  init_cell_with_0(L, L, tempcell);
+
   /*
-   *  Copy the centre of cell, excluding the halos, into allcell
+   *  Copy the centre of cell, excluding the halos, into tempcell
    */
 
   for (i = 0; i < LX; i++)
   {
     for (j = 0; j < LY; j++)
     {
-      tempcell[X_COORD + i][Y_COORD + j] = cell[i + 1][j + 1];
+      tempcell[COORD[0] + i][COORD[1] + j] = cell[i + 1][j + 1];
     }
   }
 
@@ -366,17 +281,48 @@ int main(int argc, char *argv[])
     cellwritedynamic("cell.pbm", allcell, L);
   }
 
-  /* Free the dynamic assigned Memory */
+  /* Free the dynamic assigned memory and Finalize */
   free(neigh);
   free(cell);
   free(tempcell);
   free(allcell);
 
-  /*
-   * Finalise MPI before finishing
-   */
-
   MPI_Finalize();
 
   return 0;
+}
+
+/*
+ * 2D decomposition parallel program to simulate a 2D cellular automaton
+ */
+
+void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD)
+{
+  /* Initalize the Dim and Cart */
+  int dim[2] = {0, 0};
+  /* Set periodic in second  to TRUE */
+  int period[2] = {FALSE, TRUE};
+  int ndim = 2;
+
+  /* Create a 2D (n * m) Cartersian Topology where n*m = NPROC */
+  MPI_Dims_create(NPROC, 2, dim);
+  MPI_Cart_create(comm, ndim, dim, period, FALSE, &(*cart));
+
+  /* Coordinate of the current process in Cart Topology */
+  int p_coord[2];
+  MPI_Cart_coords(*cart, rank, ndim, p_coord);
+
+  *LX = L / dim[0];
+  *LY = L / dim[1];
+
+  COORD[0] = L / dim[0] * p_coord[0];
+  COORD[1] = L / dim[1] * p_coord[1];
+
+  int IS_END_X = p_coord[0] == (dim[0] - 1);
+  int IS_END_Y = p_coord[1] == (dim[1] - 1);
+
+  if (IS_END_X)
+    *LX = L - *LX * (dim[0] - 1);
+  if (IS_END_Y)
+    *LY = L - *LY * (dim[1] - 1);
 }

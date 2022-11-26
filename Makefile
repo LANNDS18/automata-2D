@@ -14,7 +14,7 @@ SRC= \
 	automaton.c \
 	cellio.c \
 	unirand.c \
-	utilities.c \
+	cellutility.c \
 	arralloc.c
 
 #
