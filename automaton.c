@@ -33,7 +33,6 @@ int main(int argc, char *argv[])
    */
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  MPI_Status status;
   MPI_Request request[8];
 
   int size, rank;
@@ -71,7 +70,7 @@ int main(int argc, char *argv[])
    *  periodically report progress
    */
 
-  maxstep =  10 * L; //1000000;
+  maxstep =  1000000;
   printfreq = 500;
 
   if (rank == 0)
@@ -152,15 +151,20 @@ int main(int argc, char *argv[])
   {
     step++;
 
-    halo_swap_mpi(LX, LY, cell, right, left, up, down, cart, VERTICAL_HALO_TYPE, request, status);
+    halo_swap_2d_mpi(LX, LY, cell, right, left, up, down, cart, VERTICAL_HALO_TYPE, request);
 
-    localncell = 0;
 
-    /* Update live cell by counting neighbour */
-    localncell = update_live_cell_mpi(LX, LY, neigh, cell, request, status);
+    /* 
+     * Update live cell by counting neighbour 
+     */
+
+    localncell = update_live_cell_mpi(LX, LY, neigh, cell, request);
+
+
     /*
      *  Compute global number of changes on all processes for checking whether reaching target value
      */
+
     MPI_Allreduce(&localncell, &ncell, 1, MPI_INT, MPI_SUM, cart);
 
     /*

@@ -39,25 +39,29 @@ void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, in
         *LY = L - *LY * (dim[1] - 1);
 }
 
-void halo_swap_mpi(int LX, int LY, int **cell, int right, int left, int up, int down, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request, MPI_Status status)
+
+void halo_swap_2d_mpi(int lx, int ly, int **cell, int right, int left, int up, int down, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request)
 {
     int tag = 1;
+    MPI_Status status;
     /* Non Blocking Send */
-    MPI_Isend(&cell[LX][1], LY, MPI_INT, right, tag, cart, &request[0]);
-    MPI_Recv(&cell[0][1], LY, MPI_INT, left, tag, cart, &status);
+    MPI_Isend(&cell[lx][1], ly, MPI_INT, right, tag, cart, &request[0]);
+    MPI_Recv(&cell[0][1], ly, MPI_INT, left, tag, cart, &status);
 
-    MPI_Isend(&cell[1][1], LY, MPI_INT, left, tag, cart, &request[1]);
-    MPI_Recv(&cell[LX + 1][1], LY, MPI_INT, right, tag, cart, &status);
+    MPI_Isend(&cell[1][1], ly, MPI_INT, left, tag, cart, &request[1]);
+    MPI_Recv(&cell[lx + 1][1], ly, MPI_INT, right, tag, cart, &status);
 
-    MPI_Isend(&cell[1][LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
+    MPI_Isend(&cell[1][ly], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
     MPI_Recv(&cell[1][0], 1, VERTICAL_HALO_TYPE, down, tag, cart, &status);
 
     MPI_Isend(&cell[1][1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
-    MPI_Recv(&cell[1][LY + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
+    MPI_Recv(&cell[1][ly + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
 }
 
-int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request, MPI_Status status)
+
+int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request)
 {
+    MPI_Status status;
     int localncell = 0;
     for (int i = 1; i <= lx; i++)
     {
