@@ -1,20 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <mpi.h>
 
 #include "automaton.h"
 
 /*
- * 2D decomposition parallel program to simulate a 2D cellular automaton
+ * Allocate process in 2d space and assign different parts of allcell to each process for simulation
  */
 
 void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD)
 {
+    int ndim = 2;
     /* Initalize the Dim and Cart */
     int dim[2] = {0, 0};
     /* Set periodic in second  to TRUE */
     int period[2] = {FALSE, TRUE};
-    int ndim = 2;
 
     /* Create a 2D (n * m) Cartersian Topology where n*m = NPROC */
     MPI_Dims_create(NPROC, 2, dim);
@@ -40,6 +38,10 @@ void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, in
 }
 
 
+/*
+ * Halo Swap function in 2d decomposition, using Non-blocking send.
+ */
+
 void halo_swap_2d_mpi(int lx, int ly, int **cell, int right, int left, int up, int down, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request)
 {
     int tag = 1;
@@ -59,6 +61,10 @@ void halo_swap_2d_mpi(int lx, int ly, int **cell, int right, int left, int up, i
 }
 
 
+/*
+ * Main simulation function for one step update
+ */
+
 int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request)
 {
     MPI_Status status;
@@ -77,6 +83,7 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
     MPI_Wait(&request[2], &status);
     MPI_Wait(&request[3], &status);
 
+    // Update live status based on number of live neighbours
     for (int i = 1; i <= lx; i++)
     {
         for (int j = 1; j <= ly; j++)

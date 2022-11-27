@@ -31,8 +31,6 @@ void init_cell_with_seed(int l, int seed, double rho, int *ncell, int **allcell)
     }
 }
 
-
-
 /*
  * Initialize the assigning part of allcell to cell by lx, ly and their start point's coord
  */
@@ -63,7 +61,6 @@ void init_local_cell(int lx, int ly, int *coord, int **allcell, int **cell)
     }
 }
 
-
 /*
  * Initialize cell by filling 0, useful for debugging and initalize temp variables
  */
@@ -79,23 +76,21 @@ void init_cell_with_0(int lx, int ly, int **cell)
     }
 }
 
-
 /*
  * Display a 2d-array by lx and ly
  */
 
 void print_2d_array(int lx, int ly, int **display)
 {
-    for (int i = 0; i < lx; i++)
+    for (int j = ly - 1; j >= 0; j--)
     {
-        for (int j = 0; j < ly; j++)
+        for (int i = 0; i < lx; i++)
         {
             printf("%d,", display[i][j]);
         }
         printf("\n");
     }
 }
-
 
 /*
  * Compute number of live cells within a cell by lx and ly
