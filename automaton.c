@@ -34,10 +34,9 @@ int main(int argc, char *argv[])
 
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Status status;
-  MPI_Request request[4];
+  MPI_Request request[8];
 
   int size, rank;
-  int tag = 1;
 
   MPI_Init(&argc, &argv);
 
@@ -72,7 +71,7 @@ int main(int argc, char *argv[])
    *  periodically report progress
    */
 
-  maxstep = 1000000;
+  maxstep =  10 * L; //1000000;
   printfreq = 500;
 
   if (rank == 0)
@@ -97,6 +96,7 @@ int main(int argc, char *argv[])
     /*  Initialise with the fraction of filled cells equal to rho */
     init_cell_with_seed(L, seed, rho, &ncell, allcell);
 
+    /*  Compute Lower and Upper Bound of Target value */
     lower_target = (int)((double)ncell * 2 / 3);
     upper_target = (int)((double)ncell * 3 / 2);
 
@@ -129,10 +129,9 @@ int main(int argc, char *argv[])
   MPI_Cart_shift(cart, 0, 1, &left, &right);
   MPI_Cart_shift(cart, 1, 1, &down, &up);
 
-
- /* 
- * Define a vector derived datatype for send and recv the halo from 
- */
+  /*
+   * Define a vector derived datatype for send and recv the halo from
+   */
 
   MPI_Datatype VERTICAL_HALO_TYPE;
   MPI_Type_vector(LX, 1, LY + 2, MPI_INT, &VERTICAL_HALO_TYPE);
@@ -153,53 +152,12 @@ int main(int argc, char *argv[])
   {
     step++;
 
-    MPI_Isend(&cell[LX][1], LY, MPI_INT, right, tag, cart, &request[0]);
-    MPI_Isend(&cell[1][1], LY, MPI_INT, left, tag, cart, &request[1]);
-
-    MPI_Recv(&cell[0][1], LY, MPI_INT, left, tag, cart, &status);
-    MPI_Recv(&cell[LX + 1][1], LY, MPI_INT, right, tag, cart, &status);
-
-    /* Non Blocking Send and Receive function to Upper and Lower Processes */
-    MPI_Isend(&cell[1][LY], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
-    MPI_Isend(&cell[1][1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
-
-    MPI_Recv(&cell[1][0], 1, VERTICAL_HALO_TYPE, down, tag, cart, &status);
-    MPI_Recv(&cell[1][LY + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
-
-    for (i = 1; i <= LX; i++)
-    {
-      for (j = 1; j <= LY; j++)
-      {
-        // Compute the lives cell for each assigned cell
-        neigh[i][j] = cell[i][j] + cell[i][j - 1] + cell[i][j + 1] + cell[i - 1][j] + cell[i + 1][j];
-      }
-    }
-
-    MPI_Wait(&request[0], &status);
-    MPI_Wait(&request[1], &status);
-    MPI_Wait(&request[2], &status);
-    MPI_Wait(&request[3], &status);
+    halo_swap_mpi(LX, LY, cell, right, left, up, down, cart, VERTICAL_HALO_TYPE, request, status);
 
     localncell = 0;
 
     /* Update live cell by counting neighbour */
-    for (i = 1; i <= LX; i++)
-    {
-      for (j = 1; j <= LY; j++)
-      {
-
-        if (neigh[i][j] == 2 || neigh[i][j] == 4 || neigh[i][j] == 5)
-        {
-          cell[i][j] = 1;
-          localncell++;
-        }
-        else
-        {
-          cell[i][j] = 0;
-        }
-      }
-    }
-
+    localncell = update_live_cell_mpi(LX, LY, neigh, cell, request, status);
     /*
      *  Compute global number of changes on all processes for checking whether reaching target value
      */
@@ -295,39 +253,4 @@ int main(int argc, char *argv[])
   MPI_Finalize();
 
   return 0;
-}
-
-/*
- * 2D decomposition parallel program to simulate a 2D cellular automaton
- */
-
-void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD)
-{
-  /* Initalize the Dim and Cart */
-  int dim[2] = {0, 0};
-  /* Set periodic in second  to TRUE */
-  int period[2] = {FALSE, TRUE};
-  int ndim = 2;
-
-  /* Create a 2D (n * m) Cartersian Topology where n*m = NPROC */
-  MPI_Dims_create(NPROC, 2, dim);
-  MPI_Cart_create(comm, ndim, dim, period, FALSE, &(*cart));
-
-  /* Coordinate of the current process in Cart Topology */
-  int p_coord[2];
-  MPI_Cart_coords(*cart, rank, ndim, p_coord);
-
-  *LX = L / dim[0];
-  *LY = L / dim[1];
-
-  COORD[0] = L / dim[0] * p_coord[0];
-  COORD[1] = L / dim[1] * p_coord[1];
-
-  int IS_END_X = p_coord[0] == (dim[0] - 1);
-  int IS_END_Y = p_coord[1] == (dim[1] - 1);
-
-  if (IS_END_X)
-    *LX = L - *LX * (dim[0] - 1);
-  if (IS_END_Y)
-    *LY = L - *LY * (dim[1] - 1);
 }

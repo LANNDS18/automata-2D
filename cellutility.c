@@ -99,9 +99,10 @@ void print_2d_array(int lx, int ly, int **display)
 
 /*
  * Compute number of live cells within a cell by lx and ly
+ * Return int total: Number of total live cell
  */
 
-void check_number_live_cells(int lx, int ly, int **cell)
+int check_number_live_cells(int lx, int ly, int **cell)
 {
     int total = 0;
     for (int i = 0; i < lx; i++)
@@ -113,4 +114,5 @@ void check_number_live_cells(int lx, int ly, int **cell)
         }
     }
     printf("Number of Total Live Cells: %d\n", total);
+    return total;
 }

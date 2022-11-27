@@ -14,8 +14,9 @@ SRC= \
 	automaton.c \
 	cellio.c \
 	unirand.c \
+	arralloc.c \
 	cellutility.c \
-	arralloc.c
+	cellmpi.c \
 
 #
 # No need to edit below this line

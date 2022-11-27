@@ -6,7 +6,7 @@
 
 #define L 768
 
-#define NPROC 4
+#define NPROC 8
 
 #define TRUE 1
 #define FALSE 0
@@ -17,6 +17,8 @@
  */
 
 void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD);
+int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request, MPI_Status status);
+void halo_swap_mpi(int LX, int LY, int **cell, int right, int left, int up, int down, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request, MPI_Status status);
 
 
 /*
@@ -43,7 +45,7 @@ void init_cell_with_0(int lx, int ly, int **cell);
 void init_local_cell(int lx, int ly, int *coord, int **allcell, int **cell);
 
 void print_2d_array(int lx, int ly, int **display);
-void check_number_live_cells(int lx, int ly, int **cell);
+int check_number_live_cells(int lx, int ly, int **cell);
 
 /*
  * Dynamic Array Allocation
