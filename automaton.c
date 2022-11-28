@@ -90,6 +90,17 @@ int main(int argc, char *argv[])
   int **allcell = arralloc(sizeof(int), 2, L, L);
   int **tempcell = arralloc(sizeof(int), 2, L, L);
 
+  /*
+   *Initalize the Dim and Create 2d Cart
+   */
+
+  int dim[2] = {0, 0};
+  create_2d_cart(size, comm, dim, &cart);
+  allocate_cells(L, rank, dim, cart, &LX, &LY, COORD);
+  printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
+  /* Get the neighbour processes */
+  p_adj = get_adjacent_processes(cart);
+
   if (rank == 0)
   {
     /*  Initialise with the fraction of filled cells equal to rho */
@@ -103,21 +114,12 @@ int main(int argc, char *argv[])
            rho, ncell, ((double)ncell) / ((double)L * L));
     printf("lower target number of cells: %d\n", lower_target);
     printf("upper target number of cells: %d\n", upper_target);
+    printf("2D decomposition dimension: (%d, %d)\n", dim[0], dim[1]);
   }
 
   MPI_Bcast(&allcell[0][0], L * L, MPI_INT, 0, comm);
   MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
   MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
-
-  /* Initalize the Dim */
-  int dim[2] = {0, 0};
-  create_2d_cart(size, comm, dim, &cart);
-  allocate_cells(L, rank, dim, cart, &LX, &LY, COORD);
-
-  printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
-
-  /* Get the neighbour processes */
-  p_adj = get_adjacent_processes(cart);
 
   /*
    * Define a vector derived datatype for send and recv the halo from
