@@ -11,14 +11,21 @@
 #define TRUE 1
 #define FALSE 0
 
-
+struct adjacent_process
+{
+    int left;
+    int right;
+    int up;
+    int down;
+};
 /*
  * Cell updating functions implemented with MPI
  */
 
 void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD);
+struct adjacent_process get_adjacent_processes(MPI_Comm cart);
+void halo_swap_2d_mpi(int lx, int ly, int **cell, struct adjacent_process p_adj, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request);
 int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request);
-void halo_swap_2d_mpi(int lx, int ly, int **cell, int right, int left, int up, int down, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request);
 
 
 /*

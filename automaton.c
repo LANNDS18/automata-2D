@@ -27,13 +27,17 @@ int main(int argc, char *argv[])
   int lower_target, upper_target;
   int i, j, ncell, localncell, maxstep, printfreq;
   int step = 0;
+  int COORD[2];  // the start point of the assigned part of cell for each dim
+  int LX, LY; // The length assigned cell for each dim
+  struct adjacent_process p_adj; // Ranks of neighbour process in 2D
 
   /*
    *  MPI common world variables
    */
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  MPI_Request request[8];
+  MPI_Comm cart; // 2d Cart Topology Comm World
+  MPI_Request request[4]; // Store Isend Requests
 
   int size, rank;
 
@@ -110,23 +114,11 @@ int main(int argc, char *argv[])
   MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
   MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
 
-  MPI_Comm cart;
-
-  /* store the start point of the assigned part of cell for each dim */
-  int COORD[2];
-
-  /* The length assigned cell for each dim */
-  int LX, LY;
-
-  /* Rank of neighbour process */
-  int up, down, left, right;
-
   create_2d_cart_and_assign_coord(rank, comm, &cart, &LX, &LY, &COORD[0]);
   printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
 
-  /* Get the neighbour process by cart shift */
-  MPI_Cart_shift(cart, 0, 1, &left, &right);
-  MPI_Cart_shift(cart, 1, 1, &down, &up);
+  /* Get the neighbour processes */
+  p_adj = get_adjacent_processes(cart);
 
   /*
    * Define a vector derived datatype for send and recv the halo from
@@ -151,7 +143,7 @@ int main(int argc, char *argv[])
   {
     step++;
 
-    halo_swap_2d_mpi(LX, LY, cell, right, left, up, down, cart, VERTICAL_HALO_TYPE, request);
+    halo_swap_2d_mpi(LX, LY, cell, p_adj, cart, VERTICAL_HALO_TYPE, request);
 
 
     /* 
@@ -193,15 +185,15 @@ int main(int argc, char *argv[])
 
   MPI_Barrier(cart);
   double t_end = MPI_Wtime();
-  double interval = t_end - t_start;
-  double time_per_step = interval / step;
-
   /*
    * Output the timing result and whether and which targets it achieve
    */
 
   if (rank == 0)
   {
+    double interval = t_end - t_start;
+    double time_per_step = interval / step;
+    
     printf("\n");
     printf("Total computing time is %f [s]\n", interval);
     printf("Time per step is %g [s]\n", time_per_step);

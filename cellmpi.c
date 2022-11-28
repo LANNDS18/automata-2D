@@ -1,4 +1,6 @@
 #include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "automaton.h"
 
@@ -37,29 +39,27 @@ void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, in
         *LY = L - *LY * (dim[1] - 1);
 }
 
-
 /*
  * Halo Swap function in 2d decomposition, using Non-blocking send.
  */
 
-void halo_swap_2d_mpi(int lx, int ly, int **cell, int right, int left, int up, int down, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request)
+void halo_swap_2d_mpi(int lx, int ly, int **cell, struct adjacent_process p_adj, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request)
 {
     int tag = 1;
     MPI_Status status;
     /* Non Blocking Send */
-    MPI_Isend(&cell[lx][1], ly, MPI_INT, right, tag, cart, &request[0]);
-    MPI_Recv(&cell[0][1], ly, MPI_INT, left, tag, cart, &status);
+    MPI_Isend(&cell[lx][1], ly, MPI_INT, p_adj.right, tag, cart, &request[0]);
+    MPI_Recv(&cell[0][1], ly, MPI_INT, p_adj.left, tag, cart, &status);
 
-    MPI_Isend(&cell[1][1], ly, MPI_INT, left, tag, cart, &request[1]);
-    MPI_Recv(&cell[lx + 1][1], ly, MPI_INT, right, tag, cart, &status);
+    MPI_Isend(&cell[1][1], ly, MPI_INT, p_adj.left, tag, cart, &request[1]);
+    MPI_Recv(&cell[lx + 1][1], ly, MPI_INT, p_adj.right, tag, cart, &status);
 
-    MPI_Isend(&cell[1][ly], 1, VERTICAL_HALO_TYPE, up, tag, cart, &request[2]);
-    MPI_Recv(&cell[1][0], 1, VERTICAL_HALO_TYPE, down, tag, cart, &status);
+    MPI_Isend(&cell[1][ly], 1, VERTICAL_HALO_TYPE, p_adj.up, tag, cart, &request[2]);
+    MPI_Recv(&cell[1][0], 1, VERTICAL_HALO_TYPE, p_adj.down, tag, cart, &status);
 
-    MPI_Isend(&cell[1][1], 1, VERTICAL_HALO_TYPE, down, tag, cart, &request[3]);
-    MPI_Recv(&cell[1][ly + 1], 1, VERTICAL_HALO_TYPE, up, tag, cart, &status);
+    MPI_Isend(&cell[1][1], 1, VERTICAL_HALO_TYPE, p_adj.down, tag, cart, &request[3]);
+    MPI_Recv(&cell[1][ly + 1], 1, VERTICAL_HALO_TYPE, p_adj.up, tag, cart, &status);
 }
-
 
 /*
  * Main simulation function for one step update
@@ -102,4 +102,15 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
     }
 
     return localncell;
+}
+
+
+
+struct adjacent_process get_adjacent_processes(MPI_Comm cart)
+{
+    /* Get the neighbour process by cart shift */
+    struct adjacent_process p_neigh;
+    MPI_Cart_shift(cart, 0, 1, &p_neigh.left, &p_neigh.right);
+    MPI_Cart_shift(cart, 1, 1, &p_neigh.down, &p_neigh.up);
+    return p_neigh;
 }
