@@ -46,7 +46,7 @@ float uni(void);
 void init_cell_with_seed(int l, int seed, double rho, int *ncell, int **allcell);
 void init_cell_with_0(int lx, int ly, int **cell);
 void init_local_cell(int lx, int ly, int *coord, int **allcell, int **cell);
-void print_updating_result(int t_end, int t_start, int step, int ncell, int upper_target, int lower_target, int maxstep);
+void print_updating_result(double t_end, double t_start, int step, int ncell, int upper_target, int lower_target, int maxstep);
 void print_2d_array(int lx, int ly, int **display);
 int check_number_live_cells(int lx, int ly, int **cell);
 

@@ -51,37 +51,23 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+
+  if (rank == 0)
+  {
+    printf("automaton: running on %d process(es)\n", size);
+    L = atoi(argv[2]);
+  }
+
+  // Brocast valur of L andto all processes
+  MPI_Bcast(&L, 1, MPI_INT, 0, comm);
+  
   /*
    *  Update for a large number of steps to prevent execute without stopping
    *  periodically report progress
    */
 
-  maxstep = 1000000;
+  maxstep =  1000000;
   printfreq = 500;
-
-  if (rank == 0)
-  {
-    printf("automaton: running on %d process(es)\n", size);
-
-    /*
-     *  Set the cell density rho (between 0 and 1)
-     */
-
-    rho = 0.49;
-
-    /*
-     *  Set the randum number seed and initialise the generator
-     */
-
-    seed = atoi(argv[1]);
-    L = atoi(argv[2]);
-
-    printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
-           L, rho, seed, maxstep);
-  }
-
-  // Brocast valur of L to all processes
-  MPI_Bcast(&L, 1, MPI_INT, 0, comm);
 
   /*
    *  Additional array WITHOUT halos for initialisation and IO.
@@ -103,6 +89,21 @@ int main(int argc, char *argv[])
 
   if (rank == 0)
   {
+
+    /*
+     *  Set the cell density rho (between 0 and 1)
+     */
+
+    rho = 0.49;
+
+    /*
+     *  Set the randum number seed and initialise the generator
+     */
+
+    seed = atoi(argv[1]);
+    printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
+           L, rho, seed, maxstep);
+
     /*  Initialise with the fraction of filled cells equal to rho */
     init_cell_with_seed(L, seed, rho, &ncell, allcell);
 

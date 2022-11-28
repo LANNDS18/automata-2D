@@ -97,7 +97,7 @@ void print_2d_array(int lx, int ly, int **display)
  * Print the timing and updating results
  */
 
-void print_updating_result(int t_end, int t_start, int step, int ncell, int upper_target, int lower_target, int maxstep)
+void print_updating_result(double t_end, double t_start, int step, int ncell, int upper_target, int lower_target, int maxstep)
 {
     double interval = t_end - t_start;
     double time_per_step = interval / step;
@@ -116,7 +116,7 @@ void print_updating_result(int t_end, int t_start, int step, int ncell, int uppe
     }
     else
     {
-      printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d", maxstep, ncell);
+      printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d\n", maxstep, ncell);
     }
     printf("*************************************************************************************\n");
 }
