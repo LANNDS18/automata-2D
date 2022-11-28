@@ -4,10 +4,6 @@
  *  System size L
  */
 
-#define L 768
-
-#define NPROC 4
-
 #define TRUE 1
 #define FALSE 0
 
@@ -22,7 +18,8 @@ struct adjacent_process
  * Cell updating functions implemented with MPI
  */
 
-void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD);
+void create_2d_cart(int size, MPI_Comm comm, int *dim, MPI_Comm *cart);
+void allocate_cells(int L, int rank, int *dim, MPI_Comm cart, int *LX, int *LY, int *COORD);
 struct adjacent_process get_adjacent_processes(MPI_Comm cart);
 void halo_swap_2d_mpi(int lx, int ly, int **cell, struct adjacent_process p_adj, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request);
 int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request);
