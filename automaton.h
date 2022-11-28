@@ -32,7 +32,6 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
  *  Visualisation
  */
 
-void cellwrite(char *cellfile, int cell[L][L]);
 void cellwritedynamic(char *cellfile, int **cell, int l);
 
 /*

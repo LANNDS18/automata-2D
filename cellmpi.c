@@ -10,6 +10,8 @@
 
 void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, int *LX, int *LY, int *COORD)
 {
+    int size;
+    MPI_Comm_size(comm, &size);
     int ndim = 2;
     /* Initalize the Dim and Cart */
     int dim[2] = {0, 0};
@@ -17,7 +19,7 @@ void create_2d_cart_and_assign_coord(int rank, MPI_Comm comm, MPI_Comm *cart, in
     int period[2] = {FALSE, TRUE};
 
     /* Create a 2D (n * m) Cartersian Topology where n*m = NPROC */
-    MPI_Dims_create(NPROC, 2, dim);
+    MPI_Dims_create(size, 2, dim);
     MPI_Cart_create(comm, ndim, dim, period, FALSE, &(*cart));
 
     /* Coordinate of the current process in Cart Topology */
