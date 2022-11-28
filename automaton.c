@@ -21,9 +21,9 @@ int main(int argc, char *argv[])
   int lower_target, upper_target;
   int i, j, ncell, localncell, maxstep, printfreq;
   int step = 0;
-  int COORD[2];                  // the start point of the assigned part of cell for each dim
-  int LX, LY;                    // The length assigned cell for each dim
-  struct adjacent_process p_adj; // Ranks of neighbour process in 2D
+  int COORD[2];                    // the start point of the assigned part of cell for each dim
+  int LX, LY;                      // The length assigned cell for each dim
+  struct adjacent_process p_neigh; // Ranks of neighbour process in 2D
 
   /*
    *  MPI common world variables
@@ -54,11 +54,6 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  if (rank == 0)
-  {
-    printf("automaton: running on %d process(es)\n", size);
-  }
-
   // Brocast valur of L andto all processes
   MPI_Bcast(&L, 1, MPI_INT, 0, comm);
 
@@ -69,6 +64,13 @@ int main(int argc, char *argv[])
 
   maxstep = 1000000;
   printfreq = 500;
+
+  if (rank == 0)
+  {
+    printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
+           L, rho, seed, maxstep);
+    printf("automaton: running on %d process(es)\n", size);
+  }
 
   /*
    *  Additional array WITHOUT halos for initialisation and IO.
@@ -86,15 +88,13 @@ int main(int argc, char *argv[])
   allocate_cells(L, rank, dim, cart, &LX, &LY, COORD);
   printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
   /* Get the neighbour processes */
-  p_adj = get_adjacent_processes(cart);
+  p_neigh = get_adjacent_processes(cart);
 
   if (rank == 0)
   {
     /*
      *  Set the randum number seed and initialise the generator
      */
-    printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
-           L, rho, seed, maxstep);
 
     /*  Initialise with the fraction of filled cells equal to rho */
     init_cell_with_seed(L, seed, rho, &ncell, allcell);
@@ -106,15 +106,15 @@ int main(int argc, char *argv[])
     printf("automaton: rho = %f, live cells = %d, actual density = %f\n",
            rho, ncell, ((double)ncell) / ((double)L * L));
 
-    printf("lower target number of cells: %d\n", lower_target);
-    printf("upper target number of cells: %d\n", upper_target);
+    printf("automaton: lower target number of cells: %d\n", lower_target);
+    printf("automaton: upper target number of cells: %d\n", upper_target);
 
     if (upper_target > L * L)
-      printf("upper target equal to %d which is unachievable\n", upper_target);
+      printf("automaton: upper target equals to %d which is unachievable\n", upper_target);
     if (lower_target < 0)
-      printf("upper target equal to %d which is unachievable\n", lower_target);
+      printf("automaton: upper target equals to %d which is unachievable\n", lower_target);
 
-    printf("2D decomposition dimension: (%d, %d)\n", dim[0], dim[1]);
+    printf("automaton: 2D decomposition dimension: (%d, %d)\n", dim[0], dim[1]);
   }
 
   MPI_Bcast(&allcell[0][0], L * L, MPI_INT, 0, comm);
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
   {
     step++;
 
-    halo_swap_2d_mpi(LX, LY, cell, p_adj, cart, VERTICAL_HALO_TYPE, request);
+    halo_swap_2d_mpi(LX, LY, cell, p_neigh, cart, VERTICAL_HALO_TYPE, request);
 
     /*
      * Update live cell by counting neighbour
