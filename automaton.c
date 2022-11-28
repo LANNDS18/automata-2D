@@ -39,34 +39,35 @@ int main(int argc, char *argv[])
 
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
+  int arg_check_bit;
 
-  if (argc != 3)
+  if (rank == 0)
   {
-    if (rank == 0)
-    {
-      printf("Usage: automaton <seed> <L>\n");
-    }
+    arg_check_bit = check_argument(argc, argv, &seed, &L, &rho);
+  }
 
+  MPI_Bcast(&arg_check_bit, 1, MPI_INT, 0, comm);
+
+  if (arg_check_bit == 0)
+  {
     MPI_Finalize();
     return 1;
   }
 
-
   if (rank == 0)
   {
     printf("automaton: running on %d process(es)\n", size);
-    L = atoi(argv[2]);
   }
 
   // Brocast valur of L andto all processes
   MPI_Bcast(&L, 1, MPI_INT, 0, comm);
-  
+
   /*
    *  Update for a large number of steps to prevent execute without stopping
    *  periodically report progress
    */
 
-  maxstep =  1000000;
+  maxstep = 1000000;
   printfreq = 500;
 
   /*
@@ -89,18 +90,9 @@ int main(int argc, char *argv[])
 
   if (rank == 0)
   {
-
-    /*
-     *  Set the cell density rho (between 0 and 1)
-     */
-
-    rho = 0.49;
-
     /*
      *  Set the randum number seed and initialise the generator
      */
-
-    seed = atoi(argv[1]);
     printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
            L, rho, seed, maxstep);
 
@@ -113,8 +105,15 @@ int main(int argc, char *argv[])
 
     printf("automaton: rho = %f, live cells = %d, actual density = %f\n",
            rho, ncell, ((double)ncell) / ((double)L * L));
+
     printf("lower target number of cells: %d\n", lower_target);
     printf("upper target number of cells: %d\n", upper_target);
+
+    if (upper_target > L * L)
+      printf("upper target equal to %d which is unachievable\n", upper_target);
+    if (lower_target < 0)
+      printf("upper target equal to %d which is unachievable\n", lower_target);
+
     printf("2D decomposition dimension: (%d, %d)\n", dim[0], dim[1]);
   }
 

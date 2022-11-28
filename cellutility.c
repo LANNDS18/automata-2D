@@ -92,7 +92,6 @@ void print_2d_array(int lx, int ly, int **display)
     }
 }
 
-
 /*
  * Print the timing and updating results
  */
@@ -108,19 +107,18 @@ void print_updating_result(double t_end, double t_start, int step, int ncell, in
     printf("\n");
     if (ncell >= upper_target)
     {
-      printf("Sucesslly achieve upper target, current live cells: %d, step: %d\n", ncell, step);
+        printf("Sucesslly achieve upper target, current live cells: %d, step: %d\n", ncell, step);
     }
     else if (ncell <= lower_target)
     {
-      printf("Sucesslly achieve lower target, current live cells: %d, step: %d\n", ncell, step);
+        printf("Sucesslly achieve lower target, current live cells: %d, step: %d\n", ncell, step);
     }
     else
     {
-      printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d\n", maxstep, ncell);
+        printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d\n", maxstep, ncell);
     }
     printf("*************************************************************************************\n");
 }
-
 
 /*
  * Compute number of live cells within a cell by lx and ly
@@ -140,4 +138,48 @@ int check_number_live_cells(int lx, int ly, int **cell)
     }
     printf("Number of Total Live Cells: %d\n", total);
     return total;
+}
+
+/*
+ * Check the count and value of the argument
+ */
+
+int check_argument(int argc, char *argv[], int *seed, int *L, double *rho)
+{
+    switch (argc)
+    {
+    case 2:
+        printf("L is set to default (768), rho is set to default (0.49)\n");
+        *seed = atoi(argv[1]);
+        *L = 768;
+        *rho = 0.49;
+        break;
+    case 3:
+        printf("rho is set to default (0.49)\n");
+        *seed = atoi(argv[1]);
+        *L = atoi(argv[2]);
+        *rho = 0.49;
+        break;
+    case 4:
+        *seed = atoi(argv[1]);
+        *L = atoi(argv[2]);
+        *rho = atof(argv[3]);
+        break;
+    default:
+        printf("Usage: automaton <int: seed (must be specified)> <int: L (default 768)> <double: rho (default 0.49)>\n");
+        return 0;
+    }
+
+    if (*L <= 0)
+    {
+        printf("L must be greater than 0\n");
+        return 0;
+    }
+
+    if (*rho <= 0 || *rho >= 1)
+    {
+        printf("rho must be greater than 0 and less than 1\n");
+        return 0;
+    }
+    return 1;
 }

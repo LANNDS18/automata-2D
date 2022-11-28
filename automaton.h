@@ -49,7 +49,7 @@ void init_local_cell(int lx, int ly, int *coord, int **allcell, int **cell);
 void print_updating_result(double t_end, double t_start, int step, int ncell, int upper_target, int lower_target, int maxstep);
 void print_2d_array(int lx, int ly, int **display);
 int check_number_live_cells(int lx, int ly, int **cell);
-
+int check_argument(int argc, char *argv[], int *seed, int *L, double *rho);
 /*
  * Dynamic Array Allocation
  */
