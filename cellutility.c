@@ -92,6 +92,36 @@ void print_2d_array(int lx, int ly, int **display)
     }
 }
 
+
+/*
+ * Print the timing and updating results
+ */
+
+void print_updating_result(int t_end, int t_start, int step, int ncell, int upper_target, int lower_target, int maxstep)
+{
+    double interval = t_end - t_start;
+    double time_per_step = interval / step;
+
+    printf("*************************************************************************************\n");
+    printf("Total computing time is %f [s]\n", interval);
+    printf("Time per step is %g [s]\n", time_per_step);
+    printf("\n");
+    if (ncell >= upper_target)
+    {
+      printf("Sucesslly achieve upper target, current live cells: %d, step: %d\n", ncell, step);
+    }
+    else if (ncell <= lower_target)
+    {
+      printf("Sucesslly achieve lower target, current live cells: %d, step: %d\n", ncell, step);
+    }
+    else
+    {
+      printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d", maxstep, ncell);
+    }
+    printf("*************************************************************************************\n");
+}
+
+
 /*
  * Compute number of live cells within a cell by lx and ly
  * Return int total: Number of total live cell

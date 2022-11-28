@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
    */
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  MPI_Comm cart;          // 2d Cart Topology Comm World
-  MPI_Request request[4]; // Store Isend Requests
+  MPI_Comm cart;          // 2d Cart topology comm world
+  MPI_Request request[4]; // Store Isend requests
 
   int size, rank;
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
            L, rho, seed, maxstep);
   }
 
-  // Deistribute the allcell to all the processess
+  // Brocast valur of L to all processes
   MPI_Bcast(&L, 1, MPI_INT, 0, comm);
 
   /*
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
   MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
   MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
 
-  /* Initalize the Dim and Cart */
+  /* Initalize the Dim */
   int dim[2] = {0, 0};
   create_2d_cart(size, comm, dim, &cart);
   allocate_cells(L, rank, dim, cart, &LX, &LY, COORD);
@@ -188,26 +188,7 @@ int main(int argc, char *argv[])
 
   if (rank == 0)
   {
-    double interval = t_end - t_start;
-    double time_per_step = interval / step;
-
-    printf("\n");
-    printf("Total computing time is %f [s]\n", interval);
-    printf("Time per step is %g [s]\n", time_per_step);
-    printf("\n");
-    if (ncell >= upper_target)
-    {
-      printf("Sucesslly achieve upper target, current live cells: %d, step: %d\n", ncell, step);
-    }
-    else if (ncell <= lower_target)
-    {
-      printf("Sucesslly achieve lower target, current live cells: %d, step: %d\n", ncell, step);
-    }
-    else
-    {
-      printf("Fail to achieve target, exceed max steps:  %d, current live cells: %d", maxstep, ncell);
-    }
-    printf("\n");
+    print_updating_result(t_end, t_start, step, ncell, upper_target, lower_target, maxstep);
   }
 
   /* Initialize tempcell with all 0 to avoid wrong reduction */
