@@ -61,23 +61,9 @@ void init_local_cell(int lx, int ly, int *coord, int **allcell, int **cell)
     }
 }
 
-/*
- * Initialize cell by filling 0, useful for debugging and initalize temp variables
- */
-
-void init_cell_with_0(int lx, int ly, int **cell)
-{
-    for (int i = 0; i < lx; i++)
-    {
-        for (int j = 0; j < ly; j++)
-        {
-            cell[i][j] = 0;
-        }
-    }
-}
 
 /*
- * Display a 2d-array by lx and ly
+ * Display a 2d-array by lx and ly, useful for debugging
  */
 
 void print_2d_array(int lx, int ly, int **display)
@@ -149,13 +135,13 @@ int check_argument(int argc, char *argv[], int *seed, int *L, double *rho)
     switch (argc)
     {
     case 2:
-        printf("Missing L and rho in args: L is set to default (768), rho is set to default (0.49)\n");
+        printf("args: L is set to default (768), rho is set to default (0.49)\n");
         *seed = atoi(argv[1]);
         *L = 768;
         *rho = 0.49;
         break;
     case 3:
-        printf("Missing rho in args: rho is set to default (0.49)\n");
+        printf("args: rho is set to default (0.49)\n");
         *seed = atoi(argv[1]);
         *L = atoi(argv[2]);
         *rho = 0.49;
@@ -166,19 +152,20 @@ int check_argument(int argc, char *argv[], int *seed, int *L, double *rho)
         *rho = atof(argv[3]);
         break;
     default:
+        printf("args: invalid\n");
         printf("Usage: automaton <int: seed (must be specified)> <int: L (default 768)> <double: rho (default 0.49)>\n");
         return 0;
     }
 
-    if (*L <= 0)
+    if (*L < 1)
     {
-        printf("Invalid: L must be greater than 0\n");
+        printf("args: invalid input, L must be greater than 0\n");
         return 0;
     }
 
     if (*rho <= 0 || *rho >= 1)
     {
-        printf("Invalid: rho must be greater than 0 and less than 1\n");
+        printf("args: invalid input, rho must be greater than 0 and less than 1\n");
         return 0;
     }
     return 1;

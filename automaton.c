@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
    *  Local variables
    */
   int lower_target, upper_target;
-  int i, j, ncell, localncell, maxstep, printfreq;
+  int ncell, localncell, maxstep, printfreq;
   int step = 0;
   int COORD[2];                    // the start point of the assigned part of cell for each dim
   int LX, LY;                      // The length assigned cell for each dim
@@ -70,7 +70,6 @@ int main(int argc, char *argv[])
    */
 
   int **allcell = arralloc(sizeof(int), 2, L, L);
-  int **tempcell = arralloc(sizeof(int), 2, L, L);
 
   /*
    *Initalize the Dim and Create 2d Cart
@@ -174,23 +173,7 @@ int main(int argc, char *argv[])
     print_updating_result(t_end, t_start, step, ncell, upper_target, lower_target, maxstep);
   }
 
-  /* Initialize tempcell with all 0 to avoid wrong reduction */
-  init_cell_with_0(L, L, tempcell);
-
-  /*
-   *  Copy the centre of cell, excluding the halos, into tempcell
-   */
-
-  for (i = 0; i < LX; i++)
-  {
-    for (j = 0; j < LY; j++)
-    {
-      tempcell[COORD[0] + i][COORD[1] + j] = cell[i + 1][j + 1];
-    }
-  }
-
-  /* Collect the result by reduction */
-  MPI_Reduce(&tempcell[0][0], &allcell[0][0], L * L, MPI_INT, MPI_SUM, 0, cart);
+  collect_allcells_mpi(L, LX, LY, COORD, cell, cart, allcell);
 
   /*
    *  Write the cells to the file "cell.pbm" from rank 0 with dynamic allocation
@@ -204,7 +187,6 @@ int main(int argc, char *argv[])
   /* Free the dynamic assigned memory and Finalize */
   free(neigh);
   free(cell);
-  free(tempcell);
   free(allcell);
 
   MPI_Finalize();

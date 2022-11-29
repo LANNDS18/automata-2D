@@ -19,7 +19,6 @@ void create_2d_cart(int size, MPI_Comm comm, int *dim, MPI_Comm *cart)
     MPI_Cart_create(comm, ndim, dim, period, FALSE, cart);
 }
 
-
 /*
  * Assign different parts of allcell to each process for simulation
  */
@@ -111,7 +110,9 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
     return localncell;
 }
 
-
+/*
+ * Get the adjacent(neighbour) process(es) of current process.
+ */
 
 struct adjacent_process get_adjacent_processes(MPI_Comm cart)
 {
@@ -120,4 +121,38 @@ struct adjacent_process get_adjacent_processes(MPI_Comm cart)
     MPI_Cart_shift(cart, 0, 1, &p_neigh.left, &p_neigh.right);
     MPI_Cart_shift(cart, 1, 1, &p_neigh.down, &p_neigh.up);
     return p_neigh;
+}
+
+/*
+ * Get the adjacent(neighbour) process(es) of current process.
+ */
+
+void collect_allcells_mpi(int L, int LX, int LY, int *COORD, int **cell, MPI_Comm cart, int **allcell)
+{
+    int **tempcell = arralloc(sizeof(int), 2, L, L);
+
+    /* Initialize tempcell with all 0 to avoid wrong reduction */
+    for (int i = 0; i < LX; i++)
+    {
+        for (int j = 0; j < LY; j++)
+        {
+            tempcell[i][j] = 0;
+        }
+    }
+
+    /*
+     *  Copy the centre of cell, excluding the halos, into tempcell
+     */
+
+    for (int i = 0; i < LX; i++)
+    {
+        for (int j = 0; j < LY; j++)
+        {
+            tempcell[COORD[0] + i][COORD[1] + j] = cell[i + 1][j + 1];
+        }
+    }
+
+    /* Collect the result by reduction */
+    MPI_Reduce(&tempcell[0][0], &allcell[0][0], L * L, MPI_INT, MPI_SUM, 0, cart);
+    free(tempcell);
 }
