@@ -11,18 +11,16 @@ int main(int argc, char *argv[])
    *  Variables that define the simulation
    */
 
-  int seed;
+  int seed, L, LX, LY; // LX, LY: The length assigned cell for each dim
   double rho;
-  int L;
+  int lower_target, upper_target;
 
   /*
    *  Local variables
    */
-  int lower_target, upper_target;
   int ncell, localncell, maxstep, printfreq;
   int step = 0;
-  int COORD[2];                    // the start point of the assigned part of cell for each dim
-  int LX, LY;                      // The length assigned cell for each dim
+  int cell_coord[2];               // the start point of the assigned part of cell for each dim
   struct adjacent_process p_neigh; // Ranks of neighbour process in 2D
 
   /*
@@ -77,7 +75,7 @@ int main(int argc, char *argv[])
 
   int dim[2] = {0, 0};
   create_2d_cart(size, comm, dim, &cart);
-  allocate_cells(L, rank, dim, cart, &LX, &LY, COORD);
+  allocate_cells(L, rank, dim, cart, &LX, &LY, cell_coord);
   /* Get the neighbour processes */
   p_neigh = get_adjacent_processes(cart);
 
@@ -114,7 +112,7 @@ int main(int argc, char *argv[])
    */
   int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
   int **neigh = arralloc(sizeof(int), 2, LX + 2, LY + 2);
-  init_local_cell(LX, LY, COORD, allcell, cell);
+  init_local_cell(LX, LY, cell_coord, allcell, cell);
 
   // Start the timer
   MPI_Barrier(cart);
@@ -173,7 +171,7 @@ int main(int argc, char *argv[])
     print_updating_result(t_end, t_start, step, ncell, upper_target, lower_target, maxstep);
   }
 
-  collect_allcells_mpi(L, LX, LY, COORD, cell, cart, allcell);
+  collect_allcells_mpi(L, LX, LY, cell_coord, cell, cart, allcell);
 
   /*
    *  Write the cells to the file "cell.pbm" from rank 0 with dynamic allocation
