@@ -50,6 +50,7 @@ void print_updating_result(double t_end, double t_start, int step, int ncell, in
 void print_2d_array(int lx, int ly, int **display);
 int check_number_live_cells(int lx, int ly, int **cell);
 int check_argument(int argc, char *argv[], int *seed, int *L, double *rho);
+void print_init_cell_info(int L, double rho, int seed, int maxstep, int size, int ncell, int l_target, int u_target, int *dim);
 /*
  * Dynamic Array Allocation
  */

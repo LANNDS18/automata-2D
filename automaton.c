@@ -65,13 +65,6 @@ int main(int argc, char *argv[])
   maxstep = 1000000;
   printfreq = 500;
 
-  if (rank == 0)
-  {
-    printf("automaton: L = %d, rho = %f, seed = %d, maxstep = %d\n",
-           L, rho, seed, maxstep);
-    printf("automaton: running on %d process(es)\n", size);
-  }
-
   /*
    *  Additional array WITHOUT halos for initialisation and IO.
    */
@@ -86,7 +79,6 @@ int main(int argc, char *argv[])
   int dim[2] = {0, 0};
   create_2d_cart(size, comm, dim, &cart);
   allocate_cells(L, rank, dim, cart, &LX, &LY, COORD);
-  printf("L = %d, LY= %d, LX=%d, Rank=%d\n", L, LY, LX, rank);
   /* Get the neighbour processes */
   p_neigh = get_adjacent_processes(cart);
 
@@ -103,18 +95,7 @@ int main(int argc, char *argv[])
     lower_target = (int)((double)ncell * 2 / 3);
     upper_target = (int)((double)ncell * 3 / 2);
 
-    printf("automaton: rho = %f, live cells = %d, actual density = %f\n",
-           rho, ncell, ((double)ncell) / ((double)L * L));
-
-    printf("automaton: lower target number of cells: %d\n", lower_target);
-    printf("automaton: upper target number of cells: %d\n", upper_target);
-
-    if (upper_target > L * L)
-      printf("automaton: upper target equals to %d which is unachievable\n", upper_target);
-    if (lower_target < 0)
-      printf("automaton: upper target equals to %d which is unachievable\n", lower_target);
-
-    printf("automaton: 2D decomposition dimension: (%d, %d)\n", dim[0], dim[1]);
+    print_init_cell_info(L, rho, seed, maxstep, size, ncell, lower_target, upper_target, dim);
   }
 
   MPI_Bcast(&allcell[0][0], L * L, MPI_INT, 0, comm);
