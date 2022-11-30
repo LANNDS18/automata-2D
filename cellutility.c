@@ -72,7 +72,7 @@ void print_2d_array(int lx, int ly, int **display)
     {
         for (int i = 0; i < lx; i++)
         {
-            printf("%d,", display[i][j]);
+            printf("%d,\t", display[i][j]);
         }
         printf("\n");
     }

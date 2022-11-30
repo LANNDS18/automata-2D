@@ -8,7 +8,7 @@
  * Allocate process in 2d space and assign different parts of allcell to each process for simulation
  */
 
-void create_2d_cart(int size, MPI_Comm comm, int *dim, MPI_Comm *cart)
+void create_2d_cart_mpi(int size, MPI_Comm comm, int *dim, MPI_Comm *cart)
 {
     int ndim = 2;
     /* Set periodic in second  to TRUE */
@@ -23,7 +23,7 @@ void create_2d_cart(int size, MPI_Comm comm, int *dim, MPI_Comm *cart)
  * Assign different parts of allcell to each process for simulation
  */
 
-void allocate_cells(int L, int rank, int *dim, MPI_Comm cart, int *LX, int *LY, int *COORD)
+void allocate_cells_mpi(int L, int rank, int *dim, MPI_Comm cart, int *LX, int *LY, int *COORD)
 {
     int ndim = 2;
     /* Coordinate of the current process in Cart Topology */
@@ -114,7 +114,7 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
  * Get the adjacent(neighbour) process(es) of current process.
  */
 
-struct adjacent_process get_adjacent_processes(MPI_Comm cart)
+struct adjacent_process get_adjacent_processes_mpi(MPI_Comm cart)
 {
     /* Get the neighbour process by cart shift */
     struct adjacent_process p_neigh;

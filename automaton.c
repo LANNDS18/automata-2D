@@ -30,13 +30,12 @@ int main(int argc, char *argv[])
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm cart;          // 2d Cart topology comm world
   MPI_Request request[4]; // Store Isend requests
-
   int size, rank;
 
   MPI_Init(&argc, &argv);
-
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
+
   int arg_check_bit;
 
   if (rank == 0)
@@ -74,10 +73,26 @@ int main(int argc, char *argv[])
    */
 
   int dim[2] = {0, 0};
-  create_2d_cart(size, comm, dim, &cart);
-  allocate_cells(L, rank, dim, cart, &LX, &LY, cell_coord);
+  create_2d_cart_mpi(size, comm, dim, &cart);
+  allocate_cells_mpi(L, rank, dim, cart, &LX, &LY, cell_coord);
+
+  /*
+   * Define a vector derived datatype for send and recv the halo from
+   */
+
+  MPI_Datatype VERTICAL_HALO_TYPE;
+  MPI_Type_vector(LX, 1, LY + 2, MPI_INT, &VERTICAL_HALO_TYPE);
+  MPI_Type_commit(&VERTICAL_HALO_TYPE);
+
+  /*
+   *  Define the main arrays for the simulation based on LX, LY
+   */
+  
+  int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
+  int **neigh = arralloc(sizeof(int), 2, LX + 2, LY + 2);
+
   /* Get the neighbour processes */
-  p_neigh = get_adjacent_processes(cart);
+  p_neigh = get_adjacent_processes_mpi(cart);
 
   if (rank == 0)
   {
@@ -99,19 +114,6 @@ int main(int argc, char *argv[])
   MPI_Bcast(&lower_target, 1, MPI_INT, 0, comm);
   MPI_Bcast(&upper_target, 1, MPI_INT, 0, comm);
 
-  /*
-   * Define a vector derived datatype for send and recv the halo from
-   */
-
-  MPI_Datatype VERTICAL_HALO_TYPE;
-  MPI_Type_vector(LX, 1, LY + 2, MPI_INT, &VERTICAL_HALO_TYPE);
-  MPI_Type_commit(&VERTICAL_HALO_TYPE);
-
-  /*
-   *  Define the main arrays for the simulation based on LX, LY
-   */
-  int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
-  int **neigh = arralloc(sizeof(int), 2, LX + 2, LY + 2);
   init_local_cell(LX, LY, cell_coord, allcell, cell);
 
   // Start the timer
