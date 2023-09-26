@@ -5,12 +5,14 @@ This project using 2D decomposition methods to simulation of Game of lifes.
 Using mpicc to compile the program. To compile on Cirrus, first we should
 
 ```
-    module load mpt 
-    module load intel-compilers-19
+module load mpt 
+module load intel-compilers-19
 ```
+
 Then
+
 ```
-    make
+make
 ```
 The executable file will be named as 'automaton'
 
@@ -20,7 +22,7 @@ The executable file will be named as 'automaton'
 To run on login node
 
 ```
-    mpicc -n <NPROC> ./automaton <SEED> <L> <rho>
+mpicc -n <NPROC> ./automaton <SEED> <L> <rho>
 ```
 where NPROC must and SEED must be specified. L and rho are set to default values as 768 and 0.49 if missing to specify. 
 
@@ -29,9 +31,9 @@ where NPROC must and SEED must be specified. L and rho are set to default values
 
 
 ```
-    sbatch cirrus_auto_2d.job
+sbatch cirrus_auto_2d.job
 ```
-NPROC is specified by ntask.
+`<NPROC>` in *.job is specified by ntask.
 
 
 ## Unit Test

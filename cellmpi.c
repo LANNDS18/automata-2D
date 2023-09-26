@@ -8,8 +8,7 @@
  * Allocate process in 2d space and assign different parts of allcell to each process for simulation
  */
 
-void create_2d_cart_mpi(int size, MPI_Comm comm, int *dim, MPI_Comm *cart)
-{
+void create_2d_cart_mpi(int size, MPI_Comm comm, int *dim, MPI_Comm *cart) {
     int ndim = 2;
     /* Set periodic in second  to TRUE */
     int period[2] = {FALSE, TRUE};
@@ -23,8 +22,7 @@ void create_2d_cart_mpi(int size, MPI_Comm comm, int *dim, MPI_Comm *cart)
  * Assign different parts of allcell to each process for simulation
  */
 
-void allocate_cells_mpi(int L, int rank, int *dim, MPI_Comm cart, int *LX, int *LY, int *COORD)
-{
+void allocate_cells_mpi(int L, int rank, int *dim, MPI_Comm cart, int *LX, int *LY, int *COORD) {
     int ndim = 2;
     /* Coordinate of the current process in Cart Topology */
     int p_coord[2];
@@ -49,8 +47,8 @@ void allocate_cells_mpi(int L, int rank, int *dim, MPI_Comm cart, int *LX, int *
  * Halo Swap function in 2d decomposition, using Non-blocking send.
  */
 
-void halo_swap_2d_mpi(int lx, int ly, int **cell, struct adjacent_process p_adj, MPI_Comm cart, MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request)
-{
+void halo_swap_2d_mpi(int lx, int ly, int **cell, struct adjacent_process p_adj, MPI_Comm cart,
+                      MPI_Datatype VERTICAL_HALO_TYPE, MPI_Request *request) {
     int tag = 1;
     MPI_Status status;
     /* Non Blocking Send */
@@ -71,14 +69,11 @@ void halo_swap_2d_mpi(int lx, int ly, int **cell, struct adjacent_process p_adj,
  * Main simulation function for one step update
  */
 
-int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request)
-{
+int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *request) {
     MPI_Status status;
     int localncell = 0;
-    for (int i = 1; i <= lx; i++)
-    {
-        for (int j = 1; j <= ly; j++)
-        {
+    for (int i = 1; i <= lx; i++) {
+        for (int j = 1; j <= ly; j++) {
             // Compute the lives cell for each assigned cell
             neigh[i][j] = cell[i][j] + cell[i][j - 1] + cell[i][j + 1] + cell[i - 1][j] + cell[i + 1][j];
         }
@@ -90,18 +85,13 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
     MPI_Wait(&request[3], &status);
 
     // Update live status based on number of live neighbours
-    for (int i = 1; i <= lx; i++)
-    {
-        for (int j = 1; j <= ly; j++)
-        {
+    for (int i = 1; i <= lx; i++) {
+        for (int j = 1; j <= ly; j++) {
 
-            if (neigh[i][j] == 2 || neigh[i][j] == 4 || neigh[i][j] == 5)
-            {
+            if (neigh[i][j] == 2 || neigh[i][j] == 4 || neigh[i][j] == 5) {
                 cell[i][j] = 1;
                 localncell++;
-            }
-            else
-            {
+            } else {
                 cell[i][j] = 0;
             }
         }
@@ -114,8 +104,7 @@ int update_live_cell_mpi(int lx, int ly, int **neigh, int **cell, MPI_Request *r
  * Get the adjacent(neighbour) process(es) of current process.
  */
 
-struct adjacent_process get_adjacent_processes_mpi(MPI_Comm cart)
-{
+struct adjacent_process get_adjacent_processes_mpi(MPI_Comm cart) {
     /* Get the neighbour process by cart shift */
     struct adjacent_process p_neigh;
     MPI_Cart_shift(cart, 0, 1, &p_neigh.left, &p_neigh.right);
@@ -127,15 +116,12 @@ struct adjacent_process get_adjacent_processes_mpi(MPI_Comm cart)
  * Get the adjacent(neighbour) process(es) of current process.
  */
 
-void collect_allcells_mpi(int L, int LX, int LY, int *COORD, int **cell, MPI_Comm cart, int **allcell)
-{
+void collect_allcells_mpi(int L, int LX, int LY, int *COORD, int **cell, MPI_Comm cart, int **allcell) {
     int **tempcell = arralloc(sizeof(int), 2, L, L);
 
     /* Initialize tempcell with all 0 to avoid wrong reduction */
-    for (int i = 0; i < LX; i++)
-    {
-        for (int j = 0; j < LY; j++)
-        {
+    for (int i = 0; i < LX; i++) {
+        for (int j = 0; j < LY; j++) {
             tempcell[i][j] = 0;
         }
     }
@@ -144,10 +130,8 @@ void collect_allcells_mpi(int L, int LX, int LY, int *COORD, int **cell, MPI_Com
      *  Copy the centre of cell, excluding the halos, into tempcell
      */
 
-    for (int i = 0; i < LX; i++)
-    {
-        for (int j = 0; j < LY; j++)
-        {
+    for (int i = 0; i < LX; i++) {
+        for (int j = 0; j < LY; j++) {
             tempcell[COORD[0] + i][COORD[1] + j] = cell[i + 1][j + 1];
         }
     }

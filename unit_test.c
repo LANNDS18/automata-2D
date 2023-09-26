@@ -4,8 +4,7 @@
 
 #include "automaton.h"
 
-void test_halo_swap()
-{
+void test_halo_swap() {
 
     int L, LX, LY; // LX, LY: The length assigned cell for each dim
     L = 4;
@@ -25,8 +24,7 @@ void test_halo_swap()
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("=============================================== \n");
         printf("Start to run Unit Test for Halo Swapping \n");
         printf("------------------------------------------------\n");
@@ -49,12 +47,9 @@ void test_halo_swap()
 
     int loop = 0;
 
-    if (rank == 0)
-    {
-        for (int i = 0; i < L; i++)
-        {
-            for (int j = 0; j < L; j++)
-            {
+    if (rank == 0) {
+        for (int i = 0; i < L; i++) {
+            for (int j = 0; j < L; j++) {
                 allcell[i][j] = loop;
                 loop++;
             }
@@ -65,8 +60,7 @@ void test_halo_swap()
 
     init_local_cell(LX, LY, cell_coord, allcell, cell);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("all cell:\n");
         print_2d_array(L, L, allcell);
 
@@ -81,8 +75,7 @@ void test_halo_swap()
     MPI_Wait(&request[2], &status);
     MPI_Wait(&request[3], &status);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
 
         printf("rank 0 after swapping: \n");
         print_2d_array(LX + 2, LY + 2, cell);
@@ -96,8 +89,7 @@ void test_halo_swap()
     free(allcell);
 }
 
-void test_2d_grid()
-{
+void test_2d_grid() {
     int L, LX, LY; // LX, LY: The length assigned cell for each dim
     L = 7;
 
@@ -110,8 +102,7 @@ void test_2d_grid()
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("=============================================== \n");
         printf("Start to run Unit Test for cartesian topology \n");
         printf("------------------------------------------------\n");
@@ -124,17 +115,16 @@ void test_2d_grid()
     allocate_cells_mpi(L, rank, dim, cart, &LX, &LY, cell_coord);
     struct adjacent_process p_neigh = get_adjacent_processes_mpi(cart);
     MPI_Barrier(comm);
-    if (rank == 0)
-    {
-        printf("rank %d, left: %d, right: %d, up: %d, down: %d, LX:%d, LY:%d\n", rank, p_neigh.left, p_neigh.right, p_neigh.up, p_neigh.down, LX, LY);
+    if (rank == 0) {
+        printf("rank %d, left: %d, right: %d, up: %d, down: %d, LX:%d, LY:%d\n", rank, p_neigh.left, p_neigh.right,
+               p_neigh.up, p_neigh.down, LX, LY);
         printf("------------------------------------------------\n");
         printf("Finish Unit Test for cartesian topology \n");
         printf("=============================================== \n");
     }
 }
 
-void test_results_collection()
-{
+void test_results_collection() {
     int L, LX, LY; // LX, LY: The length assigned cell for each dim
     L = 7;
 
@@ -151,8 +141,7 @@ void test_results_collection()
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("=============================================== \n");
         printf("Start to run Unit Test for Result Collection  \n");
         printf("------------------------------------------------\n");
@@ -167,18 +156,15 @@ void test_results_collection()
     int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
     int **allcell = arralloc(sizeof(int), 2, L, L);
 
-    for (int i = 1; i <= LX + 1; i++)
-    {
-        for (int j = 1; j <= LY + 1; j++)
-        {
+    for (int i = 1; i <= LX + 1; i++) {
+        for (int j = 1; j <= LY + 1; j++) {
             cell[i][j] = rank;
         }
     }
 
     collect_allcells_mpi(L, LX, LY, cell_coord, cell, cart, allcell);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("all cell:\n");
         print_2d_array(L, L, allcell);
         printf("------------------------------------------------\n");
@@ -190,8 +176,7 @@ void test_results_collection()
     free(cell);
 }
 
-void test_unbalanced_distribution()
-{
+void test_unbalanced_distribution() {
     int L, LX, LY; // LX, LY: The length assigned cell for each dim
     L = 7;
 
@@ -208,8 +193,7 @@ void test_unbalanced_distribution()
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("=============================================== \n");
         printf("Start to run Unit Test for Unbalanced Distribution  \n");
         printf("------------------------------------------------\n");
@@ -224,18 +208,15 @@ void test_unbalanced_distribution()
     int **cell = arralloc(sizeof(int), 2, LX + 2, LY + 2);
     int **allcell = arralloc(sizeof(int), 2, L, L);
 
-    for (int i = 1; i <= LX + 1; i++)
-    {
-        for (int j = 1; j <= LY + 1; j++)
-        {
+    for (int i = 1; i <= LX + 1; i++) {
+        for (int j = 1; j <= LY + 1; j++) {
             cell[i][j] = rank;
         }
     }
 
     collect_allcells_mpi(L, LX, LY, cell_coord, cell, cart, allcell);
 
-    if (rank == 0)
-    {
+    if (rank == 0) {
         printf("all cell:\n");
         print_2d_array(L, L, allcell);
         printf("------------------------------------------------\n");
@@ -245,8 +226,8 @@ void test_unbalanced_distribution()
     free(allcell);
     free(cell);
 }
-int main()
-{
+
+int main() {
     MPI_Init(NULL, NULL);
     test_2d_grid();
     test_halo_swap();
